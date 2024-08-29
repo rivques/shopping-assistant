@@ -5,7 +5,8 @@
             "name": "Upload code to board",
             "type": "f5anything",
             "request": "launch",
-            "command": "Copy-Item -Path \"${file}\" -Destination \"D:\\code.py\";robocopy ${workspaceFolder}\\lib D:\\lib * /xf .* /xd .* /mir /xo /im",
+            "command": "cp \"${file}\" /Volumes/CIRCUITPY/code.py;rsync -av --update ${workspaceFolder}/lib/ /Volumes/CIRCUITPY/lib/",
+            // WINDOWS: "command": "Copy-Item -Path \"${file}\" -Destination \"D:\\code.py\";robocopy ${workspaceFolder}\\lib D:\\lib * /xf .* /xd .* /mir /xo /im",
             "showTerminal": false,
             "terminalName": "Code Uploader"
         }
