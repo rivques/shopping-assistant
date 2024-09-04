@@ -1,0 +1,6 @@
+python-dotenv
+requests
+beautifulsoup4
+openai
+pillow
+py3-tts
