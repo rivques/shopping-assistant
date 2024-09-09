@@ -10,16 +10,18 @@ system_prompt = "You are an assistant to a visually impaired person. You are giv
 # engine = pyttsx3.init()
 # engine.setProperty('rate', 300) 
 
-def describe_upc(upc, filepath):
+def get_product_page_url_target(upc):
     # step one: look up the product by UPC with a custom google search
     search_url = f"https://www.googleapis.com/customsearch/v1?q=UPC%3A%20{upc}&key={os.getenv('SEARCH_API_KEY')}&siteSearch=target.com&siteSearchFilter=i&cx=e2d91e113b89b446b"
     print(f"Searching for UPC {upc} via URL {search_url}")
     search_response = requests.get(search_url)
     print(search_response.json())
     search_response.raise_for_status()
-    result_page = search_response.json()['items'][0]['link']
+    return search_response.json()['items'][0]['link']
+
+def get_message_content_target(result_page_url):
     # step two: extract the product name and photo from the result
-    product_page = requests.get(result_page)
+    product_page = requests.get(result_page_url)
     product_page.raise_for_status()
     print(product_page.text)
     product_soup = bs4.BeautifulSoup(product_page.text, 'html.parser')
@@ -39,7 +41,9 @@ def describe_upc(upc, filepath):
     message_content = [{"type": "text", "text": f"Describe this product. Name: {product_name}"}]
     for url in product_image_urls:
         message_content.append({"type": "image_url", "image_url": {"url": url, "detail": "low"}})
-    # step three: throw it at gpt4omini
+    return message_content
+
+def get_text_description(message_content):
     oai_response = oai_client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -49,9 +53,21 @@ def describe_upc(upc, filepath):
     )
     print(oai_response)
     print()
-    print(oai_response.choices[0].message.content)
+    return oai_response.choices[0].message.content
+
+def describe_upc(upc):
+    result_page_url = get_product_page_url_target(upc)
+    message_content = get_message_content_target(result_page_url)
+    # step three: throw it at gpt4omini
+    text_description = get_text_description(message_content)
     # step four: text-to-speecch the result
-    subprocess.run(["espeak", "-w", filepath, oai_response.choices[0].message.content])
+    return text_description
+
+def text_to_wav(text, filepath):
+    subprocess.run(["espeak", "-w", filepath, text])
+
+def wav_to_mp3(wavpath, mp3path):
+    subprocess.run(["ffmpeg", "-y", "-i", wavpath, mp3path])
 
 if __name__ == "__main__":
     while True:
