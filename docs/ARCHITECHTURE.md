@@ -1,0 +1,10 @@
+# Stages
+We plan to build this project in two stages. The first stage will use the WiFi capabilities of our MCU to connect to the Internet. The second will see the MCU connect to a mobile phone over Bluetooth, then use the phone's cellular connection to enable operation when no WiFi is available.
+# Stage 1
+![image](https://github.com/user-attachments/assets/f191d59f-1b90-4d83-95ac-112bdefb8411)
+The flow will begin with a scan of a UPC code by a sensor attached to the MCU. The MCU will make an HTTP request over WiFi to a server, which will coordinate much of the search. The server will first find the URL product page pertaining to the scanned UPC. Then, it will scrape relevant product information like name, price, and pictures from that URL. It will send the product details to a large language model for summarizing, before using on-device text-to-speech to generate an audio file, which will then be sent back to the MCU and played.
+
+The reason we involve the server is to allow offloading of heavy computation from the resource-poor MCU. There are several operations that would be difficult, slow, or impossible with only a few hundred kB of RAM and about one megabyte of storage, namely HTML parsing and audio operations and caching. While this does increase the complexity of the process, it is worth it because it allows us to utilize existing code written for non-embedded platforms instead of having to port these libraries to embedded. In the short term, this server will be self-hosted by us, but it could easily be migrated to a cloud server or to a serverless environment if scale calls for it.
+# Stage 2
+![image](https://github.com/user-attachments/assets/2192c3c9-9162-4772-adb2-e35932c36111)
+Stage 2 is largely like Stage 1, except for the introduction of another hop: a cell phone. This will fix a major shortcoming of phase 1 (that the system only works when the MCU can connect to a known WiFi network) at the tradeoff of increasing complexity. The MCU will send a scanned UPC to the cell phone over Bluetooth, and the phone will then relay that UPC to the server. The phone will again relay the audio file from the server to the MCU.

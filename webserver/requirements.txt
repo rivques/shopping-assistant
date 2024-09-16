@@ -4,3 +4,4 @@ beautifulsoup4
 openai
 pillow
 py3-tts
+bottle
