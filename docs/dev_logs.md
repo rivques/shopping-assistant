@@ -15,3 +15,11 @@ Still no audio at any volume
 
 ## Idea: lower sample rate in Bluetooth version, that's the most significant difference I see. The werid behavoir when I touch it with a probe makes me think it might be an impedance thing, and 44.1kHz is unfavorable for my setup.
 can't find the place where sample rate is set though...
+
+# 2024-10-10
+
+## Switching architecture
+Due to repeated issues with establishing a bluetooth connection capable of streaming audio to a pico, we are switching to only using the pico and scanner to send the UPC info over bluetooth, having the iphone connect to the server over cell connection and getting back the MP3 file to stream over its own speakers or the speakers of any physically connected devices (double bluetooth connection is a bridge we will cross when we get there). This requires more work on the app side of things, but will make the bluetooth streaming far easier because we don't have to stream audio files over bluetooth, only UPC data. Much easier!
+
+## Switch framework for app
+We're switching to using .Net Maui as opposed to Flutter because we have a little more experience with it and are more familiar with C# than Dart. This shouldn't be hard because we haven't done much of anything with Flutter yet, so it makes very little difference.
