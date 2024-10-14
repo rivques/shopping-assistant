@@ -28,3 +28,6 @@ We're switching to using .Net Maui as opposed to Flutter because we have a littl
 
 ## Finished redesign & fabrication
 Completed prototype v1.0 with all circuitry and casing completed. Everything fits together well enough, testing needs to be completed next. Prototype v1.0 is runnin stage 1 architecture, meaning it is wifi enabled and does the processing on the server we've set up. See drawing here. ![image](drawing_v1.0.png)
+
+## Switching framework, again
+Turns out MAUI is very particular about what version of XCode it runs with, and our machine can't run that version, so we're switching back to Flutter. 
