@@ -23,3 +23,8 @@ Due to repeated issues with establishing a bluetooth connection capable of strea
 
 ## Switch framework for app
 We're switching to using .Net Maui as opposed to Flutter because we have a little more experience with it and are more familiar with C# than Dart. This shouldn't be hard because we haven't done much of anything with Flutter yet, so it makes very little difference.
+
+# 2024-10-14
+
+## Finished redesign & fabrication
+Completed prototype v1.0 with all circuitry and casing completed. Everything fits together well enough, testing needs to be completed next. Prototype v1.0 is runnin stage 1 architecture, meaning it is wifi enabled and does the processing on the server we've set up. See drawing here. ![image](drawing_v1.0.png)
