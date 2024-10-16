@@ -15,7 +15,7 @@ import board
 import audiobusio
 
 sample_rate = 8000
-tone_volume = 0.01  # Increase or decrease this to adjust the volume of the tone.
+tone_volume = 0.1  # Increase or decrease this to adjust the volume of the tone.
 frequency = 440  # Set this to the Hz of the tone you want to generate.
 length = sample_rate // frequency  # One freqency period
 sine_wave = array.array("H", [0] * length)
@@ -24,7 +24,7 @@ for i in range(length):
                         tone_volume + 1) * (2 ** 15 - 1))
 
 # For Raspberry Pi Pico(bit_clock_pin, word_select_pin, data_pin, ...)
-audio = audiobusio.I2SOut(board.GP3, board.GP4, board.GP2)
+audio = audiobusio.I2SOut(board.GP10, board.GP11, board.GP9)
 
 # For Feather M0 Express, ItsyBitsy M0 Express, Metro M0 Express
 # audio = audiobusio.I2SOut(board.D1, board.D0, board.D9)

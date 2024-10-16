@@ -17,7 +17,7 @@ import audiomp3
 mp3 = audiomp3.MP3Decoder(open("./lib/slow.mp3", "rb"))
 
 # For Raspberry Pi Pico I used GP2 = data(DIN), GP3 = bit clock(BCLK), GP4 = word select (LRC)
-audio = audiobusio.I2SOut(board.GP3, board.GP4, board.GP2)
+audio = audiobusio.I2SOut(board.GP9, board.GP10, board.GP11)
 # Or you can use different pins, just make sure the first 2 pins are next to each other
 #audio = audiobusio.I2SOut(board.GP14, board.GP15, board.GP2)
 

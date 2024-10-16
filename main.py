@@ -2,9 +2,16 @@ import board
 import busio
 import digitalio
 import os
-import lib.openai
+import time
 import adafruit_connection_manager
 import wifi
+import audiomp3
+import audiobusio
+
+
+mp3_buffer = bytearray(16384)
+mp3_decoder = audiomp3.MP3Decoder("/lib/silence.mp3", mp3_buffer)
+i2s = audiobusio.I2SOut(board.GP10, board.GP11, board.GP9)
 
 # For most CircuitPython boards:
 led = digitalio.DigitalInOut(board.LED)
@@ -31,6 +38,7 @@ ssl_context = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
 requests = adafruit_requests.Session(pool, ssl_context)
 #rssi = wifi.radio.ap_info.rssi
 
+
 print(f"\nConnecting to {ssid}...")
 #print(f"Signal Strength: {rssi}")
 wifiConnected=False
@@ -44,15 +52,13 @@ while (not wifiConnected) :
         print("Wifi!")
         wifiConnected = True
 def query(data_string):
-    # step 0: get input
-    upc = data_string
-    # step 1: get product page from search
-    search_url = f"http://home.me.rivques.dev:7467/upc2txt/target/{upc}"
-    #search_url = f"https://shopping-assistant.rivques.hackclub.app/upc2txt/target/{upc}"
-    # search_url = "http://wifitest.adafruit.com/testwifi/index.html"
-    print(search_url)
-    search_response = requests.get(search_url, headers={"Host": "shopping-assistant.rivques.hackclub.app", "User-Agent": "rivques/1.3.2", "Accept": "*/*"})
-    print(search_response.text)
+    led.value = True
+    print(f"fetching from {os.getenv('SERVER_URL')}/upc2mp3/target/{data_string}")
+    with requests.get(os.getenv("SERVER_URL") + "/upc2mp3/target/" + data_string, headers={"connection": "close"}, stream=True) as response:
+        mp3_decoder.file = response.socket
+        i2s.play(mp3_decoder)
+        while i2s.playing:
+            time.sleep(0.1)
 while True:
     data = uart.read(32)  # read up to 32 bytes
     # print(data)  # this is a bytearray type
