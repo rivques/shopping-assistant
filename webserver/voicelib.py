@@ -64,7 +64,7 @@ def describe_upc(upc):
     return text_description
 
 def text_to_wav(text, filepath):
-    subprocess.run(["espeak", "-w", filepath, text])
+    subprocess.run(["espeak-ng", "-w", filepath, text])
 
 def wav_to_mp3(wavpath, mp3path):
     subprocess.run(["ffmpeg", "-y", "-i", wavpath, mp3path])
