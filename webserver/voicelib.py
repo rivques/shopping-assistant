@@ -3,6 +3,10 @@ import os
 import bs4
 import openai
 import subprocess
+import wave
+import numpy as np
+from nix.models.TTS import NixTTSInference
+
 
 oai_client = openai.Client(api_key=os.getenv('OPENAI_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
 system_prompt = "You are an assistant to a visually impaired person. You are given images of products and should describe them in as much detail as possible. When possible, describe the actual product in addition to any claims the packaging might make. Use plain text and avoid Markdown formatting."
@@ -63,8 +67,22 @@ def describe_upc(upc):
     # step four: text-to-speecch the result
     return text_description
 
+nix = NixTTSInference(model_dir = "ttsmodel")
+
 def text_to_wav(text, filepath):
-    subprocess.run(["espeak-ng", "-w", filepath, text])
+    # tokenization
+    c, c_length, phoneme = nix.tokenize(text)
+    # Convert text to raw speech
+    xw = nix.vocalize(c, c_length)
+    # Save the speech to a wav file
+    write_wav(xw, filepath)
+
+def write_wav(xw, filepath):
+    with wave.open(filepath, 'wb') as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(22050)
+        wav_file.writeframes((2 ** 15 * xw).astype(np.int16).tobytes())
 
 def wav_to_mp3(wavpath, mp3path):
     subprocess.run(["ffmpeg", "-y", "-i", wavpath, mp3path])
