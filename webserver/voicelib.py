@@ -3,6 +3,10 @@ import os
 import bs4
 import openai
 import subprocess
+import wave
+import numpy as np
+from nix.models.TTS import NixTTSInference
+
 
 oai_client = openai.Client(api_key=os.getenv('OPENAI_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
 system_prompt = "You are an assistant to a visually impaired person. You are given images of products and should describe them in as much detail as possible. When possible, describe the actual product in addition to any claims the packaging might make. Use plain text and avoid Markdown formatting."
@@ -23,7 +27,6 @@ def get_message_content_target(result_page_url):
     # step two: extract the product name and photo from the result
     product_page = requests.get(result_page_url)
     product_page.raise_for_status()
-    print(product_page.text)
     product_soup = bs4.BeautifulSoup(product_page.text, 'html.parser')
     product_name = product_soup.select_one("#pdp-product-title-id").text
     print(f"Product name: {product_name}")
@@ -63,11 +66,50 @@ def describe_upc(upc):
     # step four: text-to-speecch the result
     return text_description
 
+nix = NixTTSInference(model_dir = "ttsmodel")
+
 def text_to_wav(text, filepath):
-    subprocess.run(["espeak-ng", "-w", filepath, text])
+    wavless_path = filepath[:-4]
+    # split into sentences, synthesize, then concatenate the wav files
+    partial_files = []
+    sentences = split_text_into_sentences(text)
+    for i, sentence in enumerate(sentences):
+        print(f"Synthesizing sentence {i}: {sentence}")
+        one_text_to_wav(sentence, f"{wavless_path}_{i}.wav")
+        partial_files.append(f"{wavless_path}_{i}.wav")    
+    cmd_to_run = ["sox"] + partial_files + [filepath]
+    print(f"Concatenating {len(sentences)} wav files into {filepath} with command {cmd_to_run}")
+    subprocess.run(cmd_to_run)
+    for i in range(len(sentences)):
+        os.remove(f"{wavless_path}_{i}.wav")
+
+def split_text_into_sentences(text):
+    # split on sentence or newline
+    # trim leading or trailing whitespace
+    # retain punctuation
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    sentences = []
+    for line in lines:
+        sentences += [sentence.strip() + "." for sentence in line.split(".") if sentence.strip()]
+    return sentences
+
+def one_text_to_wav(text, filepath):
+    # tokenization
+    c, c_length, phoneme = nix.tokenize(text)
+    # Convert text to raw speech
+    xw = nix.vocalize(c, c_length)
+    # Save the speech to a wav file
+    write_wav(xw, filepath)
+
+def write_wav(xw, filepath):
+    with wave.open(filepath, 'wb') as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(22050)
+        wav_file.writeframes((2 ** 15 * xw).astype(np.int16).tobytes())
 
 def wav_to_mp3(wavpath, mp3path):
-    subprocess.run(["ffmpeg", "-y", "-i", wavpath, mp3path])
+    subprocess.run(["ffmpeg", "-y", "-i", wavpath, "-filter:a", "atempo=1.5", mp3path])
 
 if __name__ == "__main__":
     while True:
