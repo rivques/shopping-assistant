@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:http/http.dart' as http;
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -15,21 +15,24 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BLEAudioPage(),
+      home: const BLEAudioPage(),
     );
   }
 }
 
 class BLEAudioPage extends StatefulWidget {
+  const BLEAudioPage({super.key});
+
   @override
   _BLEAudioPageState createState() => _BLEAudioPageState();
 }
 
 class _BLEAudioPageState extends State<BLEAudioPage> {
+  final player = AudioPlayer();
+  final TextEditingController _urlController = TextEditingController();
   BluetoothDevice? connectedDevice;
   BluetoothCharacteristic? uartCharacteristic;
   String receivedUrl = '';
-  AudioPlayer audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -39,12 +42,12 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
 
   // BLE connection logic
   void connectToDevice() async {
-    FlutterBluePlus.startScan(timeout: Duration(seconds: 4));
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
 
     // Scan for the nRF52840 device
     FlutterBluePlus.scanResults.listen((results) {
       for (ScanResult r in results) {
-        if (r.device.name == "nRF52840") {
+        if (r.device.platformName == "nRF52840") {
           FlutterBluePlus.stopScan();
           r.device.connect();
           setState(() {
@@ -102,36 +105,64 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   }
 
   void playAudioFromUrl(String url) async {
-    await audioPlayer.play(UrlSource(url));
+    print('Playing audio from URL: $url');
+    try {
+      await player.setUrl(url);
+      player.play();
+    } catch (e) {
+      print('Error: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("BLE Audio Player"),
+        title: const Text("BLE Audio Player"),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Text(
               'Connection status: ${connectedDevice != null ? "Connected" : "Not Connected"}',
+              style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Enter a URL to play an MP3 file:',
               style: TextStyle(fontSize: 18),
             ),
-            SizedBox(height: 20),
-            Text(
-              'Received URL: $receivedUrl',
-              style: TextStyle(fontSize: 16),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _urlController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter MP3 URL',
+              ),
+              keyboardType: TextInputType.url,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
+            const SizedBox(height: 20),
+            Text(
+              'Playing URL: $receivedUrl',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                if (receivedUrl.isNotEmpty) {
+                String url = _urlController.text.trim();
+                if (url.isNotEmpty) {
+                  print("playing overriden url");
+                  receivedUrl = url;
+                  fetchAndPlayAudio(url);
+                }
+                else if (receivedUrl.isNotEmpty) {
+                  print("playing received url");
                   fetchAndPlayAudio(receivedUrl);
                 }
               },
-              child: Text('Play Received Audio'),
+              child: const Text('Play Received Audio'),
             ),
           ],
         ),
