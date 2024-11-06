@@ -29,7 +29,7 @@ while True:
         if hardware_uart.in_waiting:
             in_char = hardware_uart.read(1)
             if in_char == b"\r":
-                print(f"Got \\r, sending...s")
+                print(f"Got \\r, sending data...")
                 ble_uart.write(read_data)
                 print(f"Sent: {read_data}")
                 read_data = ""
