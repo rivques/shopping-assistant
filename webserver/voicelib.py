@@ -56,7 +56,7 @@ def get_text_description(message_content):
     )
     print(oai_response)
     print()
-    return oai_response.choices[0].message.content
+    return oai_response.choices[0].message.content.replace("*", "").replace("-", "")
 
 def describe_upc(upc):
     result_page_url = get_product_page_url_target(upc)
