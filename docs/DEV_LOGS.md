@@ -31,3 +31,7 @@ Completed prototype v1.0 with all circuitry and casing completed. Everything fit
 
 ## Switching framework, again
 Turns out MAUI is very particular about what version of XCode it runs with, and our machine can't run that version, so we're switching back to Flutter. 
+
+# 2024-10-22
+## Flutter app progress
+Got a Flutter app sketched out, but I can't use Audioplayers because it needs XCode 15. I'll try to downgrade or use a different audio framework.
