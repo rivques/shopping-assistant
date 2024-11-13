@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'dart:io';
 
 void main() => runApp(const MyApp());
 
@@ -42,17 +44,25 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
 
   // BLE connection logic
   void connectToDevice() async {
+    FlutterBluePlus.setLogLevel(LogLevel.verbose, color:false);
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
+    print('Scanning for Bluetooth devices...');
 
     // Scan for the nRF52840 device
-    FlutterBluePlus.scanResults.listen((results) {
+    FlutterBluePlus.scanResults.listen((results) async {
+      print('Scan listener called');
       for (ScanResult r in results) {
-        if (r.device.platformName == "nRF52840") {
+        print('Found Bluetooth scan result: ${r.device.advName} with platform: ${r.device.platformName}');
+        if (r.device.platformName.startsWith("CIRCUITPY")) {
+          print('Found nRF52840 device');
           FlutterBluePlus.stopScan();
-          r.device.connect();
+          print("Connecting to device...");
+          await r.device.connect();
+          print("Connected to device");
           setState(() {
             connectedDevice = r.device;
           });
+          print("Discovering services...");
           discoverServices(r.device);
           break;
         }
@@ -63,13 +73,14 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   void discoverServices(BluetoothDevice device) async {
     List<BluetoothService> services = await device.discoverServices();
     for (BluetoothService service in services) {
-      if (service.uuid.toString() == "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
+      if (service.uuid.toString().toUpperCase() == "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
         for (BluetoothCharacteristic c in service.characteristics) {
-          if (c.uuid.toString() == "6E400002-B5A3-F393-E0A9-E50E24DCCA9E") {
+          if (c.uuid.toString().toUpperCase() == "6E400003-B5A3-F393-E0A9-E50E24DCCA9E") {
             await c.setNotifyValue(true);
             c.value.listen((value) {
               onDataReceived(value);
             });
+            print("Configured listener");
             setState(() {
               uartCharacteristic = c;
             });
@@ -81,8 +92,11 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
 
   // Handle receiving data from UART
   void onDataReceived(List<int> data) {
-    String url = String.fromCharCodes(data);
-    if (url.isNotEmpty) {
+    print("Recieved data:");
+    String datastring = String.fromCharCodes(data);
+    print(datastring);
+    if (datastring.isNotEmpty) {
+      String url = 'https://alert-rooster-accepted.ngrok-free.app/upc2mp3/target/$datastring';
       setState(() {
         receivedUrl = url;
       });
@@ -93,12 +107,13 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   // HTTP request and audio playback logic
   void fetchAndPlayAudio(String url) async {
     try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        playAudioFromUrl(url);
-      } else {
-        print('Failed to load audio file');
-      }
+      playAudioFromUrl(url);
+      // final response = await http.get(Uri.parse(url));
+      // if (response.statusCode == 200) {
+      //   playAudioFromUrl(url);
+      // } else {
+      //   print('Failed to load audio file');
+      // }
     } catch (e) {
       print('Error: $e');
     }
@@ -106,12 +121,21 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
 
   void playAudioFromUrl(String url) async {
     print('Playing audio from URL: $url');
+    final response = await http.get(Uri.parse(url));
+    print('Response status: ${response.statusCode}');
+    final directory = await getTemporaryDirectory();
+    final filePath = '${directory.path}/temp.mp3';
+    print('Writing audio file to: $filePath');
+    final file = File(filePath);
+    await file.writeAsBytes(response.bodyBytes);
+    print('File written');
     try {
-      await player.setUrl(url);
+      await player.setFilePath(filePath);
       player.play();
     } catch (e) {
       print('Error: $e');
     }
+    print('file path set');
   }
 
   @override
@@ -124,6 +148,10 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            ElevatedButton(onPressed: () {
+              connectToDevice();
+            }, child: const Text('Connect to Device')),
+            const SizedBox(height: 20),
             Text(
               'Connection status: ${connectedDevice != null ? "Connected" : "Not Connected"}',
               style: const TextStyle(fontSize: 18),
@@ -163,6 +191,13 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
                 }
               },
               child: const Text('Play Received Audio'),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                player.stop();
+              },
+              child: const Text('Stop Audio'),
             ),
           ],
         ),
