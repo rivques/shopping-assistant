@@ -44,7 +44,7 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
 
   // BLE connection logic
   void connectToDevice() async {
-    FlutterBluePlus.setLogLevel(LogLevel.verbose, color:false);
+    FlutterBluePlus.setLogLevel(LogLevel.verbose, color: false);
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
     print('Scanning for Bluetooth devices...');
 
@@ -52,7 +52,8 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
     FlutterBluePlus.scanResults.listen((results) async {
       print('Scan listener called');
       for (ScanResult r in results) {
-        print('Found Bluetooth scan result: ${r.device.advName} with platform: ${r.device.platformName}');
+        print(
+            'Found Bluetooth scan result: ${r.device.advName} with platform: ${r.device.platformName}');
         if (r.device.platformName.startsWith("CIRCUITPY")) {
           print('Found nRF52840 device');
           FlutterBluePlus.stopScan();
@@ -73,9 +74,11 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   void discoverServices(BluetoothDevice device) async {
     List<BluetoothService> services = await device.discoverServices();
     for (BluetoothService service in services) {
-      if (service.uuid.toString().toUpperCase() == "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
+      if (service.uuid.toString().toUpperCase() ==
+          "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
         for (BluetoothCharacteristic c in service.characteristics) {
-          if (c.uuid.toString().toUpperCase() == "6E400003-B5A3-F393-E0A9-E50E24DCCA9E") {
+          if (c.uuid.toString().toUpperCase() ==
+              "6E400003-B5A3-F393-E0A9-E50E24DCCA9E") {
             await c.setNotifyValue(true);
             c.value.listen((value) {
               onDataReceived(value);
@@ -96,7 +99,8 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
     String datastring = String.fromCharCodes(data);
     print(datastring);
     if (datastring.isNotEmpty) {
-      String url = 'https://alert-rooster-accepted.ngrok-free.app/upc2mp3/target/$datastring';
+      String url =
+          'https://alert-rooster-accepted.ngrok-free.app/upc2mp3/target/$datastring';
       setState(() {
         receivedUrl = url;
       });
@@ -148,57 +152,52 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            ElevatedButton(onPressed: () {
-              connectToDevice();
-            }, child: const Text('Connect to Device')),
+            ElevatedButton(
+                onPressed: () {
+                  connectToDevice();
+                },
+                child: const Text('Connect to Device')
+            ),
             const SizedBox(height: 20),
             Text(
               'Connection status: ${connectedDevice != null ? "Connected" : "Not Connected"}',
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Enter a URL to play an MP3 file:',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter MP3 URL',
-              ),
-              keyboardType: TextInputType.url,
-            ),
-            const SizedBox(height: 20),
-            const SizedBox(height: 20),
-            Text(
+            if (receivedUrl.isNotEmpty) ...[
+              Text(
               'Playing URL: $receivedUrl',
               style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 10),
+            ],
+            // Slider for playback speed
+            const Text('Playback Speed'),
+            Row(
+              children: [
+                Text('${player.speed.toStringAsFixed(2)}x'),
+                Expanded(
+                  child: Slider(
+                    value: player.speed,
+                    min: 0.5,
+                    max: 2,
+                    divisions: 6,
+                    label: '${player.speed.toString()}x',
+                    onChanged: (value) {
+                      player.setSpeed(value);
+                      setState(() {}); // Refresh to update the displayed value
+                    },
+                  ),
+                )
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                String url = _urlController.text.trim();
-                if (url.isNotEmpty) {
-                  print("playing overriden url");
-                  receivedUrl = url;
-                  fetchAndPlayAudio(url);
-                }
-                else if (receivedUrl.isNotEmpty) {
-                  print("playing received url");
-                  fetchAndPlayAudio(receivedUrl);
-                }
-              },
-              child: const Text('Play Received Audio'),
-            ),
-
-            ElevatedButton(
-              onPressed: () async {
-                player.stop();
-              },
-              child: const Text('Stop Audio'),
-            ),
+            if (player.playing)
+              ElevatedButton(
+                onPressed: () async {
+                  player.stop();
+                },
+                child: const Text('Stop Audio'),
+              ),
           ],
         ),
       ),
