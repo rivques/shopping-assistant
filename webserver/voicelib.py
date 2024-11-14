@@ -9,7 +9,7 @@ from nix.models.TTS import NixTTSInference
 
 
 oai_client = openai.Client(api_key=os.getenv('OPENAI_KEY'), base_url=os.getenv('OPENAI_BASE_URL'))
-system_prompt = "You are an assistant to a visually impaired person. You are given images of products and should describe them in as much detail as possible. When possible, describe the actual product in addition to any claims the packaging might make. Use plain text and avoid Markdown formatting."
+system_prompt = "You are an assistant to a visually impaired person. You are given images of products and should describe them in as much detail as possible. When possible, describe the actual product in addition to any claims the packaging might make. Be concise. Do not include any marketing language or claims. Describe the product as it is, not as it claims to be."
 
 # engine = pyttsx3.init()
 # engine.setProperty('rate', 300) 
@@ -58,6 +58,24 @@ def get_text_description(message_content):
     print()
     return oai_response.choices[0].message.content.replace("*", "").replace("-", "")
 
+def get_text_description_streamed(message_content):
+    oai_response = oai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message_content}
+        ],
+        stream=True
+    )
+
+    return oai_response
+
+def describe_upc_streamed(upc):
+    result_page_url = get_product_page_url_target(upc)
+    message_content = get_message_content_target(result_page_url)
+    # step three: throw it at gpt4omini
+    return get_text_description_streamed(message_content)
+
 def describe_upc(upc):
     result_page_url = get_product_page_url_target(upc)
     message_content = get_message_content_target(result_page_url)
@@ -68,15 +86,50 @@ def describe_upc(upc):
 
 nix = NixTTSInference(model_dir = "ttsmodel")
 
+current_text = ""
+current_sentence_number = 0
+def streamed_text_to_wav(new_text, filepath):
+    global current_text, current_sentence_number
+    # add the new text to the current text
+    current_text += new_text.replace("*", "").replace("-", "")
+
+    # see if current text contains multiple sentences
+    sentences = split_text_into_sentences(current_text)
+    if len(sentences) > 1:
+        print(f"detected end of sentence. original text: {current_text}, split into {len(sentences)} sentences")
+        # if so, synthesize all but the last (which may be incomplete)
+        for i in range(len(sentences) - 1):
+            print(f"Synthesizing sentence {current_sentence_number}: {sentences[i]}")
+            one_text_to_wav(sentences[i], f"{filepath}_{current_sentence_number}.wav")
+            current_sentence_number += 1
+        # save the last sentence for later
+        current_text = sentences[-1][:-1] # remove the trailing period
+    
+def streamed_text_finalize(filepath):
+    # synthesize the final sentence
+    print(f"Synthesizing final sentence: {current_text}")
+    one_text_to_wav(current_text, f"{filepath}_{current_sentence_number}.wav")
+    # concatenate the partial files
+    partial_files = [f"{filepath}_{i}.wav" for i in range(current_sentence_number + 1)]
+    cmd_to_run = ["sox"] + partial_files + [filepath]
+    print(f"Concatenating {current_sentence_number + 1} wav files into {filepath} with command {cmd_to_run}")
+    subprocess.run(cmd_to_run)
+    for i in range(current_sentence_number + 1):
+        os.remove(f"{filepath}_{i}.wav")
+
 def text_to_wav(text, filepath):
     wavless_path = filepath[:-4]
     # split into sentences, synthesize, then concatenate the wav files
     partial_files = []
     sentences = split_text_into_sentences(text)
+
+    # synthesize each sentence
     for i, sentence in enumerate(sentences):
         print(f"Synthesizing sentence {i}: {sentence}")
         one_text_to_wav(sentence, f"{wavless_path}_{i}.wav")
         partial_files.append(f"{wavless_path}_{i}.wav")    
+
+    # concatenate the partial files
     cmd_to_run = ["sox"] + partial_files + [filepath]
     print(f"Concatenating {len(sentences)} wav files into {filepath} with command {cmd_to_run}")
     subprocess.run(cmd_to_run)
