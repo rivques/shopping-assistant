@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'dart:io';
+import 'package:haptic_feedback/haptic_feedback.dart';
 
 void main() => runApp(const MyApp());
 
@@ -13,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BLE Audio Player',
+      title: 'Shopping Assistant',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -65,6 +66,14 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
           });
           print("Discovering services...");
           discoverServices(r.device);
+          // on disconnect, set connectedDevice to null
+          r.device.connectionState.listen((state) {
+            if (state == BluetoothConnectionState.disconnected) {
+              setState(() {
+                connectedDevice = null;
+              });
+            }
+          });
           break;
         }
       }
@@ -99,6 +108,7 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
     String datastring = String.fromCharCodes(data);
     print(datastring);
     if (datastring.isNotEmpty) {
+      Haptics.vibrate(HapticsType.success);
       String url =
           'https://alert-rooster-accepted.ngrok-free.app/upc2mp3/target/$datastring';
       setState(() {
@@ -146,7 +156,7 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("BLE Audio Player"),
+        title: const Text("Shopping Assistant"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -185,6 +195,7 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
                     label: '${player.speed.toString()}x',
                     onChanged: (value) {
                       player.setSpeed(value);
+                      Haptics.vibrate(HapticsType.selection);
                       setState(() {}); // Refresh to update the displayed value
                     },
                   ),
