@@ -2,10 +2,16 @@
 # echo data received over the serial port or over usb to a connected bluetooth device
 
 import board
+import digitalio
 import busio
 from adafruit_ble import BLERadio
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
+import time
+
+button = digitalio.DigitalInOut(board.D1)
+button.direction = digitalio.Direction.INPUT
+button.pull = digitalio.Pull.UP
 
 hardware_uart = busio.UART(board.TX, board.RX)
 
@@ -15,14 +21,51 @@ advertisement = ProvideServicesAdvertisement(ble_uart)
 
 ble.start_advertising(advertisement)
 
+is_down = False
+last_down = time.monotonic()
+down_handled = False
+def handle_button():
+    #print("Handling button")
+    # if the button has been down for more than 1 second and we're connected, disconnect and start advertising again
+    global is_down, last_down, down_handled
+    if button.value:
+        if is_down:
+            is_down = False
+            down_handled = False
+            # button was just released
+            print("Button up")
+    else:
+        if not is_down:
+            print("Button down")
+            is_down = True
+            last_down = time.monotonic()
+        elif time.monotonic() - last_down > 1 and not down_handled:
+            down_handled = True
+            # button has been down for more than 1 second
+            print("Button down for more than 1 second")
+            if ble.connected:
+                print("Disconnecting")
+                for connection in ble.connections:
+                    print(f"Disconnecting from {connection}")
+                    connection.disconnect()
+                ble.stop_advertising()
+                ble.start_advertising(advertisement)
+
 was_connected = False
 read_data = ""
 while True:
+    handle_button()
     while not ble.connected:
+        handle_button()
         if was_connected:
             print("Disconnected")
             was_connected = False
+            try:
+                ble.start_advertising(advertisement)
+            except:
+                pass # already advertising
     while ble.connected:
+        handle_button()
         if not was_connected:
             print(f"Connected to {ble.connections[0]}")
             was_connected = True

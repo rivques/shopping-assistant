@@ -163,10 +163,14 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
         child: Column(
           children: [
             ElevatedButton(
-                onPressed: () {
-                  connectToDevice();
-                },
-                child: const Text('Connect to Device')
+              onPressed: () {
+                if (connectedDevice != null) {
+                connectedDevice!.disconnect();
+                } else {
+                connectToDevice();
+                }
+              },
+              child: Text(connectedDevice != null ? 'Disconnect from Device' : 'Connect to Device'),
             ),
             const SizedBox(height: 20),
             Text(
