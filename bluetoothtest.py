@@ -13,6 +13,10 @@ button = digitalio.DigitalInOut(board.D1)
 button.direction = digitalio.Direction.INPUT
 button.pull = digitalio.Pull.UP
 
+camera_power = digitalio.DigitalInOut(board.D5)
+camera_power.direction = digitalio.Direction.OUTPUT
+camera_power.value = False
+
 hardware_uart = busio.UART(board.TX, board.RX)
 
 ble = BLERadio()
@@ -24,16 +28,22 @@ ble.start_advertising(advertisement)
 is_down = False
 last_down = time.monotonic()
 down_handled = False
+camera_last_on = time.monotonic()
 def handle_button():
     #print("Handling button")
     # if the button has been down for more than 1 second and we're connected, disconnect and start advertising again
-    global is_down, last_down, down_handled
+    global is_down, last_down, down_handled, camera_last_on
     if button.value:
         if is_down:
             is_down = False
             down_handled = False
             # button was just released
             print("Button up")
+            # if button was down for less than 0.5 seconds, turn on camera
+            if time.monotonic() - last_down < 0.5:
+                print("Button was down for less than 0.5 seconds")
+                camera_power.value = True
+                camera_last_on = time.monotonic()
     else:
         if not is_down:
             print("Button down")
@@ -51,12 +61,21 @@ def handle_button():
                 ble.stop_advertising()
                 ble.start_advertising(advertisement)
 
+def check_turn_camera_off():
+    global camera_last_on
+    # keep the camera on for 10 seconds after the last button press
+    if time.monotonic() - camera_last_on > 10 and camera_power.value:
+        camera_power.value = False
+        print("Turning camera off")
+
 was_connected = False
 read_data = ""
 while True:
     handle_button()
+    check_turn_camera_off()
     while not ble.connected:
         handle_button()
+        check_turn_camera_off()
         if was_connected:
             print("Disconnected")
             was_connected = False
@@ -66,6 +85,7 @@ while True:
                 pass # already advertising
     while ble.connected:
         handle_button()
+        check_turn_camera_off()
         if not was_connected:
             print(f"Connected to {ble.connections[0]}")
             was_connected = True
