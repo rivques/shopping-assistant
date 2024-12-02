@@ -89,8 +89,8 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
           if (c.uuid.toString().toUpperCase() ==
               "6E400003-B5A3-F393-E0A9-E50E24DCCA9E") {
             await c.setNotifyValue(true);
-            c.value.listen((value) {
-              onDataReceived(value);
+            c.value.listen((value) async {
+              await onDataReceived(value);
             });
             print("Configured listener");
             setState(() {
@@ -103,7 +103,7 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
   }
 
   // Handle receiving data from UART
-  void onDataReceived(List<int> data) {
+  Future<void> onDataReceived(List<int> data) async {
     print("Recieved data:");
     String datastring = String.fromCharCodes(data);
     print(datastring);
@@ -114,6 +114,8 @@ class _BLEAudioPageState extends State<BLEAudioPage> {
       setState(() {
         receivedUrl = url;
       });
+      await player.setAsset('assets/scan_success.mp3');
+      player.play();
       fetchAndPlayAudio(url);
     }
   }
