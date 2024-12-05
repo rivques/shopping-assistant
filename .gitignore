@@ -133,5 +133,6 @@ dmypy.json
 *.wav
 *.mp3
 !scan_success.mp3
+!not_found.mp3
 
 .DS_Store
