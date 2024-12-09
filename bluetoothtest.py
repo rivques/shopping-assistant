@@ -9,11 +9,11 @@ from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
 import time
 
-button = digitalio.DigitalInOut(board.D1)
+button = digitalio.DigitalInOut(board.D3)
 button.direction = digitalio.Direction.INPUT
 button.pull = digitalio.Pull.UP
 
-camera_power = digitalio.DigitalInOut(board.D5)
+camera_power = digitalio.DigitalInOut(board.D4)
 camera_power.direction = digitalio.Direction.OUTPUT
 camera_power.value = False
 
