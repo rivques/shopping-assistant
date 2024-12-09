@@ -40,6 +40,9 @@ def upc2mp3(store, upc):
     wavpath = f"output/{store}_{upc}.wav"
     mp3path = f"output/{store}_{upc}.mp3"
     oai_response = voicelib.describe_upc_streamed(upc)
+    if not oai_response:
+        print("Product not found")
+        return bottle.static_file("not_found.mp3", root='.')
     for chunk in oai_response:
         if chunk.choices[0].delta.content:
             print(f"Got text chunk {chunk.choices[0].delta.content}")
@@ -64,6 +67,6 @@ def check_cache(store, upc):
 
 @bottle.route('/')
 def index():
-    return "Try hitting the /upc2wav/<store>/<upc> endpoint"
+    return "Try hitting the /upc2mp3/&lt;store&gt;/&lt;upc&gt; endpoint"
 
 bottle.run(host='0.0.0.0', port=7467)

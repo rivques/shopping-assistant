@@ -71,7 +71,10 @@ def get_text_description_streamed(message_content):
     return oai_response
 
 def describe_upc_streamed(upc):
-    result_page_url = get_product_page_url_target(upc)
+    try:
+        result_page_url = get_product_page_url_target(upc)
+    except KeyError:
+        return None
     message_content = get_message_content_target(result_page_url)
     # step three: throw it at gpt4omini
     return get_text_description_streamed(message_content)
